@@ -50,7 +50,7 @@ func (c *Conn) HandleCommand() error {
 		return err
 	}
 
-	v := c.dispatch(data)
+	v := c.Dispatch(data)
 
 	err = c.WriteValue(v)
 
@@ -65,7 +65,7 @@ func (c *Conn) HandleCommand() error {
 	return err
 }
 
-func (c *Conn) dispatch(data []byte) interface{} {
+func (c *Conn) Dispatch(data []byte) interface{} {
 	cmd := data[0]
 	data = data[1:]
 
