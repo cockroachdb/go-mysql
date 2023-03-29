@@ -155,7 +155,7 @@ func (c *Conn) handleStmtExecute(data []byte) (*Result, error) {
 
 	var r *Result
 	var err error
-	if r, err = c.h.HandleStmtExecute(s.Context, s.Query, s.Args); err != nil {
+	if r, err = c.H.HandleStmtExecute(s.Context, s.Query, s.Args); err != nil {
 		return nil, errors.Trace(err)
 	}
 
@@ -352,7 +352,7 @@ func (c *Conn) handleStmtClose(data []byte) error {
 		return nil
 	}
 
-	if err := c.h.HandleStmtClose(stmt.Context); err != nil {
+	if err := c.H.HandleStmtClose(stmt.Context); err != nil {
 		return err
 	}
 

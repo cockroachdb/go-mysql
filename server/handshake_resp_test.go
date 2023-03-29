@@ -58,7 +58,7 @@ func TestDecodeFirstPart(t *testing.T) {
 func TestReadDB(t *testing.T) {
 	handler := &mocks.Handler{}
 	c := &Conn{
-		h: handler,
+		H: handler,
 	}
 	c.SetCapability(mysql.CLIENT_CONNECT_WITH_DB)
 	var dbName string

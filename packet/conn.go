@@ -149,7 +149,6 @@ func (c *Conn) ReadPacketTo(w io.Writer) error {
 	if _, err := io.ReadFull(c.reader, c.header[:4]); err != nil {
 		return errors.Wrapf(ErrBadConn, "io.ReadFull(header) failed. err %v", err)
 	}
-
 	length := int(uint32(c.header[0]) | uint32(c.header[1])<<8 | uint32(c.header[2])<<16)
 	sequence := c.header[3]
 

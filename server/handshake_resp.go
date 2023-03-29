@@ -9,6 +9,8 @@ import (
 	"github.com/pingcap/errors"
 )
 
+// this reads the response from the client which includes
+// authentication info.
 func (c *Conn) readHandshakeResponse() error {
 	data, pos, err := c.readFirstPart()
 	if err != nil {
@@ -21,7 +23,6 @@ func (c *Conn) readHandshakeResponse() error {
 	if err != nil {
 		return err
 	}
-
 	pos += authLen
 
 	if pos, err = c.readDb(data, pos); err != nil {
@@ -120,7 +121,7 @@ func (c *Conn) readDb(data []byte, pos int) (int, error) {
 		db := string(data[pos : pos+bytes.IndexByte(data[pos:], 0x00)])
 		pos += len(db) + 1
 
-		if err := c.h.UseDB(db); err != nil {
+		if err := c.H.UseDB(db); err != nil {
 			return 0, err
 		}
 	}
@@ -139,7 +140,9 @@ func (c *Conn) readPluginName(data []byte, pos int) int {
 	return pos
 }
 
-func (c *Conn) readAuthData(data []byte, pos int) (auth []byte, authLen int, newPos int, err error) {
+func (c *Conn) readAuthData(
+	data []byte, pos int,
+) (auth []byte, authLen int, newPos int, err error) {
 	// prevent 'panic: runtime error: index out of range' error
 	defer func() {
 		if recover() != nil {

@@ -5,10 +5,9 @@ import (
 	"net"
 	"sync/atomic"
 
-	"github.com/siddontang/go/sync2"
-
 	. "github.com/go-mysql-org/go-mysql/mysql"
 	"github.com/go-mysql-org/go-mysql/packet"
+	"github.com/siddontang/go/sync2"
 )
 
 // Conn acts like a MySQL server connection, you can use MySQL client to communicate with it.
@@ -30,18 +29,21 @@ type Conn struct {
 	password            string
 	cachingSha2FullAuth bool
 
-	h Handler
+	H Handler
 
 	stmts  map[uint32]*Stmt
 	stmtID uint32
 
 	closed sync2.AtomicBool
+	mysql  net.Conn
 }
 
 var baseConnID uint32 = 10000
 
 // NewConn: create connection with default server settings
-func NewConn(conn net.Conn, user string, password string, h Handler) (*Conn, error) {
+func NewConn(
+	conn net.Conn, user string, password string, h Handler, mysql net.Conn,
+) (*Conn, error) {
 	p := NewInMemoryProvider()
 	p.AddUser(user, password)
 
@@ -56,23 +58,26 @@ func NewConn(conn net.Conn, user string, password string, h Handler) (*Conn, err
 		Conn:               packetConn,
 		serverConf:         defaultServer,
 		credentialProvider: p,
-		h:                  h,
+		H:                  h,
 		connectionID:       atomic.AddUint32(&baseConnID, 1),
 		stmts:              make(map[uint32]*Stmt),
 		salt:               RandomBuf(20),
+		mysql:              mysql,
 	}
 	c.closed.Set(false)
 
-	if err := c.handshake(); err != nil {
-		c.Close()
-		return nil, err
-	}
+	// if err := c.handshake(); err != nil {
+	// 	c.Close()
+	// 	return nil, err
+	// }
 
 	return c, nil
 }
 
 // NewCustomizedConn: create connection with customized server settings
-func NewCustomizedConn(conn net.Conn, serverConf *Server, p CredentialProvider, h Handler) (*Conn, error) {
+func NewCustomizedConn(
+	conn net.Conn, serverConf *Server, p CredentialProvider, h Handler,
+) (*Conn, error) {
 	var packetConn *packet.Conn
 	if serverConf.tlsConfig != nil {
 		packetConn = packet.NewTLSConn(conn)
@@ -84,7 +89,7 @@ func NewCustomizedConn(conn net.Conn, serverConf *Server, p CredentialProvider, 
 		Conn:               packetConn,
 		serverConf:         serverConf,
 		credentialProvider: p,
-		h:                  h,
+		H:                  h,
 		connectionID:       atomic.AddUint32(&baseConnID, 1),
 		stmts:              make(map[uint32]*Stmt),
 		salt:               RandomBuf(20),
@@ -103,7 +108,6 @@ func (c *Conn) handshake() error {
 	if err := c.writeInitialHandshake(); err != nil {
 		return err
 	}
-
 	if err := c.readHandshakeResponse(); err != nil {
 		if errors.Is(err, ErrAccessDenied) {
 			var usingPasswd uint16 = ER_YES

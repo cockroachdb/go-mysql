@@ -75,7 +75,7 @@ func (c *Conn) dispatch(data []byte) interface{} {
 		c.Conn = nil
 		return noResponse{}
 	case COM_QUERY:
-		if r, err := c.h.HandleQuery(hack.String(data)); err != nil {
+		if r, err := c.H.HandleQuery(hack.String(data)); err != nil {
 			return err
 		} else {
 			return r
@@ -83,7 +83,7 @@ func (c *Conn) dispatch(data []byte) interface{} {
 	case COM_PING:
 		return nil
 	case COM_INIT_DB:
-		if err := c.h.UseDB(hack.String(data)); err != nil {
+		if err := c.H.UseDB(hack.String(data)); err != nil {
 			return err
 		} else {
 			return nil
@@ -93,7 +93,7 @@ func (c *Conn) dispatch(data []byte) interface{} {
 		table := hack.String(data[0:index])
 		wildcard := hack.String(data[index+1:])
 
-		if fs, err := c.h.HandleFieldList(table, wildcard); err != nil {
+		if fs, err := c.H.HandleFieldList(table, wildcard); err != nil {
 			return err
 		} else {
 			return fs
@@ -104,7 +104,7 @@ func (c *Conn) dispatch(data []byte) interface{} {
 		st.ID = c.stmtID
 		st.Query = hack.String(data)
 		var err error
-		if st.Params, st.Columns, st.Context, err = c.h.HandleStmtPrepare(st.Query); err != nil {
+		if st.Params, st.Columns, st.Context, err = c.H.HandleStmtPrepare(st.Query); err != nil {
 			return err
 		} else {
 			st.ResetParams()
@@ -134,19 +134,19 @@ func (c *Conn) dispatch(data []byte) interface{} {
 			return r
 		}
 	case COM_SET_OPTION:
-		if err := c.h.HandleOtherCommand(cmd, data); err != nil {
+		if err := c.H.HandleOtherCommand(cmd, data); err != nil {
 			return err
 		}
 
 		return eofResponse{}
 	case COM_REGISTER_SLAVE:
-		if h, ok := c.h.(ReplicationHandler); ok {
+		if h, ok := c.H.(ReplicationHandler); ok {
 			return h.HandleRegisterSlave(data)
 		} else {
-			return c.h.HandleOtherCommand(cmd, data)
+			return c.H.HandleOtherCommand(cmd, data)
 		}
 	case COM_BINLOG_DUMP:
-		if h, ok := c.h.(ReplicationHandler); ok {
+		if h, ok := c.H.(ReplicationHandler); ok {
 			pos, err := parseBinlogDump(data)
 			if err != nil {
 				return err
@@ -157,10 +157,10 @@ func (c *Conn) dispatch(data []byte) interface{} {
 				return s
 			}
 		} else {
-			return c.h.HandleOtherCommand(cmd, data)
+			return c.H.HandleOtherCommand(cmd, data)
 		}
 	case COM_BINLOG_DUMP_GTID:
-		if h, ok := c.h.(ReplicationHandler); ok {
+		if h, ok := c.H.(ReplicationHandler); ok {
 			gtidSet, err := parseBinlogDumpGTID(data)
 			if err != nil {
 				return err
@@ -171,10 +171,10 @@ func (c *Conn) dispatch(data []byte) interface{} {
 				return s
 			}
 		} else {
-			return c.h.HandleOtherCommand(cmd, data)
+			return c.H.HandleOtherCommand(cmd, data)
 		}
 	default:
-		return c.h.HandleOtherCommand(cmd, data)
+		return c.H.HandleOtherCommand(cmd, data)
 	}
 }
 
@@ -198,7 +198,9 @@ func (h EmptyHandler) HandleFieldList(table string, fieldWildcard string) ([]*Fi
 func (h EmptyHandler) HandleStmtPrepare(query string) (int, int, interface{}, error) {
 	return 0, 0, nil, fmt.Errorf("not supported now")
 }
-func (h EmptyHandler) HandleStmtExecute(context interface{}, query string, args []interface{}) (*Result, error) {
+func (h EmptyHandler) HandleStmtExecute(
+	context interface{}, query string, args []interface{},
+) (*Result, error) {
 	return nil, fmt.Errorf("not supported now")
 }
 
@@ -210,11 +212,15 @@ func (h EmptyReplicationHandler) HandleRegisterSlave(data []byte) error {
 	return fmt.Errorf("not supported now")
 }
 
-func (h EmptyReplicationHandler) HandleBinlogDump(pos Position) (*replication.BinlogStreamer, error) {
+func (h EmptyReplicationHandler) HandleBinlogDump(
+	pos Position,
+) (*replication.BinlogStreamer, error) {
 	return nil, fmt.Errorf("not supported now")
 }
 
-func (h EmptyReplicationHandler) HandleBinlogDumpGTID(gtidSet *MysqlGTIDSet) (*replication.BinlogStreamer, error) {
+func (h EmptyReplicationHandler) HandleBinlogDumpGTID(
+	gtidSet *MysqlGTIDSet,
+) (*replication.BinlogStreamer, error) {
 	return nil, fmt.Errorf("not supported now")
 }
 
