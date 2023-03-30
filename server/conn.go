@@ -5,10 +5,9 @@ import (
 	"net"
 	"sync/atomic"
 
-	"github.com/siddontang/go/sync2"
-
 	. "github.com/go-mysql-org/go-mysql/mysql"
 	"github.com/go-mysql-org/go-mysql/packet"
+	"github.com/siddontang/go/sync2"
 )
 
 // Conn acts like a MySQL server connection, you can use MySQL client to communicate with it.
@@ -72,7 +71,9 @@ func NewConn(conn net.Conn, user string, password string, h Handler) (*Conn, err
 }
 
 // NewCustomizedConn: create connection with customized server settings
-func NewCustomizedConn(conn net.Conn, serverConf *Server, p CredentialProvider, h Handler) (*Conn, error) {
+func NewCustomizedConn(
+	conn net.Conn, serverConf *Server, p CredentialProvider, h Handler,
+) (*Conn, error) {
 	var packetConn *packet.Conn
 	if serverConf.tlsConfig != nil {
 		packetConn = packet.NewTLSConn(conn)
@@ -97,6 +98,14 @@ func NewCustomizedConn(conn net.Conn, serverConf *Server, p CredentialProvider, 
 	}
 
 	return c, nil
+}
+
+func NewAuthedProxyConn(conn net.Conn, h Handler) *Conn {
+	packetConn := packet.NewConn(conn)
+	return &Conn{
+		Conn: packetConn,
+		h:    h,
+	}
 }
 
 func (c *Conn) handshake() error {
