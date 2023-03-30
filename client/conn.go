@@ -61,7 +61,9 @@ func getNetProto(addr string) string {
 
 // Connect to a MySQL server, addr can be ip:port, or a unix socket domain like /var/sock.
 // Accepts a series of configuration functions as a variadic argument.
-func Connect(addr string, user string, password string, dbName string, options ...func(*Conn)) (*Conn, error) {
+func Connect(
+	addr string, user string, password string, dbName string, options ...func(*Conn),
+) (*Conn, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -74,7 +76,16 @@ func Connect(addr string, user string, password string, dbName string, options .
 type Dialer func(ctx context.Context, network, address string) (net.Conn, error)
 
 // Connect to a MySQL server using the given Dialer.
-func ConnectWithDialer(ctx context.Context, network string, addr string, user string, password string, dbName string, dialer Dialer, options ...func(*Conn)) (*Conn, error) {
+func ConnectWithDialer(
+	ctx context.Context,
+	network string,
+	addr string,
+	user string,
+	password string,
+	dbName string,
+	dialer Dialer,
+	options ...func(*Conn),
+) (*Conn, error) {
 	c := new(Conn)
 
 	if network == "" {
@@ -120,13 +131,11 @@ func (c *Conn) handshake() error {
 		c.Close()
 		return errors.Trace(err)
 	}
-
 	if err := c.writeAuthHandshake(); err != nil {
 		c.Close()
 
 		return errors.Trace(err)
 	}
-
 	if err := c.handleAuthResult(); err != nil {
 		c.Close()
 		return errors.Trace(err)
@@ -226,7 +235,9 @@ func (c *Conn) Execute(command string, args ...interface{}) (*Result, error) {
 // conn.ExecuteMultiple(queries, func(result *mysql.Result, err error) {
 // // Use the result as you want
 // })
-func (c *Conn) ExecuteMultiple(query string, perResultCallback ExecPerResultCallback) (*Result, error) {
+func (c *Conn) ExecuteMultiple(
+	query string, perResultCallback ExecPerResultCallback,
+) (*Result, error) {
 	if err := c.writeCommandStr(COM_QUERY, query); err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -288,7 +299,12 @@ func (c *Conn) ExecuteMultiple(query string, perResultCallback ExecPerResultCall
 // // You must not save FieldValue.AsString() value after this callback is done. Copy it if you need.
 // return nil
 // }, nil)
-func (c *Conn) ExecuteSelectStreaming(command string, result *Result, perRowCallback SelectPerRowCallback, perResultCallback SelectPerResultCallback) error {
+func (c *Conn) ExecuteSelectStreaming(
+	command string,
+	result *Result,
+	perRowCallback SelectPerRowCallback,
+	perResultCallback SelectPerResultCallback,
+) error {
 	if err := c.writeCommandStr(COM_QUERY, command); err != nil {
 		return errors.Trace(err)
 	}

@@ -130,7 +130,6 @@ func (c *Conn) copyN(dst io.Writer, src io.Reader, n int64) (written int64, err 
 
 		rd, err := io.ReadAtLeast(src, buf, bcap)
 		n -= int64(rd)
-
 		if err != nil {
 			return written, errors.Trace(err)
 		}
@@ -141,7 +140,6 @@ func (c *Conn) copyN(dst io.Writer, src io.Reader, n int64) (written int64, err 
 			return written, errors.Trace(err)
 		}
 	}
-
 	return written, nil
 }
 
@@ -156,7 +154,6 @@ func (c *Conn) ReadPacketTo(w io.Writer) error {
 	if sequence != c.Sequence {
 		return errors.Errorf("invalid sequence %d != %d", sequence, c.Sequence)
 	}
-
 	c.Sequence++
 
 	if buf, ok := w.(*bytes.Buffer); ok {

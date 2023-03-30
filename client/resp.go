@@ -6,12 +6,12 @@ import (
 	"crypto/x509"
 	"encoding/binary"
 	"encoding/pem"
-
-	"github.com/pingcap/errors"
-	"github.com/siddontang/go/hack"
+	"fmt"
 
 	. "github.com/go-mysql-org/go-mysql/mysql"
 	"github.com/go-mysql-org/go-mysql/utils"
+	"github.com/pingcap/errors"
+	"github.com/siddontang/go/hack"
 )
 
 func (c *Conn) readUntilEOF() (err error) {
@@ -88,6 +88,7 @@ func (c *Conn) handleErrorPacket(data []byte) error {
 
 func (c *Conn) handleAuthResult() error {
 	data, switchToPlugin, err := c.readAuthResult()
+	fmt.Printf("%x\n", data)
 	if err != nil {
 		return err
 	}
@@ -236,7 +237,9 @@ func (c *Conn) readResult(binary bool) (*Result, error) {
 	}
 }
 
-func (c *Conn) readResultStreaming(binary bool, result *Result, perRowCb SelectPerRowCallback, perResCb SelectPerResultCallback) error {
+func (c *Conn) readResultStreaming(
+	binary bool, result *Result, perRowCb SelectPerRowCallback, perResCb SelectPerResultCallback,
+) error {
 	bs := utils.ByteSliceGet(16)
 	defer utils.ByteSlicePut(bs)
 	var err error
@@ -298,7 +301,13 @@ func (c *Conn) readResultset(data []byte, binary bool) (*Result, error) {
 	return result, nil
 }
 
-func (c *Conn) readResultsetStreaming(data []byte, binary bool, result *Result, perRowCb SelectPerRowCallback, perResCb SelectPerResultCallback) error {
+func (c *Conn) readResultsetStreaming(
+	data []byte,
+	binary bool,
+	result *Result,
+	perRowCb SelectPerRowCallback,
+	perResCb SelectPerResultCallback,
+) error {
 	columnCount, _, n := LengthEncodedInt(data)
 
 	if n-len(data) != 0 {
@@ -424,7 +433,9 @@ func (c *Conn) readResultRows(result *Result, isBinary bool) (err error) {
 	return nil
 }
 
-func (c *Conn) readResultRowsStreaming(result *Result, isBinary bool, perRowCb SelectPerRowCallback) (err error) {
+func (c *Conn) readResultRowsStreaming(
+	result *Result, isBinary bool, perRowCb SelectPerRowCallback,
+) (err error) {
 	var (
 		data []byte
 		row  []FieldValue

@@ -43,9 +43,7 @@ func (c *Conn) readInitialHandshake() error {
 
 	// skip mysql version
 	// mysql version end with 0x00
-	version := data[1 : bytes.IndexByte(data[1:], 0x00)+1]
-	c.serverVersion = string(version)
-	pos := 1 + len(version)
+	pos := 1 + bytes.IndexByte(data[1:], 0x00) + 1
 
 	// connection id length is 4
 	c.connectionID = binary.LittleEndian.Uint32(data[pos : pos+4])
@@ -70,7 +68,7 @@ func (c *Conn) readInitialHandshake() error {
 
 	if len(data) > pos {
 		// skip server charset
-		// c.charset = data[pos]
+		//c.charset = data[pos]
 		pos += 1
 
 		c.status = binary.LittleEndian.Uint16(data[pos : pos+2])
@@ -196,14 +194,14 @@ func (c *Conn) writeAuthHandshake() error {
 		capability |= CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA
 	}
 
-	// packet length
-	// capability 4
-	// max-packet size 4
-	// charset 1
-	// reserved all[0] 23
-	// username
-	// auth
-	// mysql_native_password + null-terminated
+	//packet length
+	//capability 4
+	//max-packet size 4
+	//charset 1
+	//reserved all[0] 23
+	//username
+	//auth
+	//mysql_native_password + null-terminated
 	length := 4 + 4 + 1 + 23 + len(c.user) + 1 + len(authRespLEI) + len(auth) + 21 + 1
 	if addNull {
 		length++
