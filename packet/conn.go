@@ -297,7 +297,9 @@ func (c *Conn) ResetSequence() {
 }
 
 func (c *Conn) Close() error {
-	c.Sequence = 0
+	// Rewriting the sequence number is subject to races if there is a competing
+	// Read.
+	//	c.Sequence = 0
 	if c.Conn != nil {
 		return errors.Wrap(c.Conn.Close(), "Conn.Close failed")
 	}
