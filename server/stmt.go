@@ -30,7 +30,8 @@ type Stmt struct {
 
 	Args []interface{}
 
-	Context interface{}
+	Context       interface{}
+	RawParamTypes []byte
 }
 
 func (s *Stmt) Rest(params int, columns int, context interface{}) {
@@ -122,7 +123,6 @@ func (c *Conn) handleStmtExecute(data []byte) (*Result, error) {
 	pos += 4
 
 	var nullBitmaps []byte
-	var paramTypes []byte
 	var paramValues []byte
 
 	paramNum := s.Params
@@ -141,14 +141,20 @@ func (c *Conn) handleStmtExecute(data []byte) (*Result, error) {
 			if len(data) < (pos + (paramNum << 1)) {
 				return nil, ErrMalformPacket
 			}
-
-			paramTypes = data[pos : pos+(paramNum<<1)]
+			// cache each param type, in case they get re-used later.
+			if len(s.RawParamTypes) != paramNum<<1 {
+				s.RawParamTypes = make([]byte, paramNum<<1)
+			}
+			copy(s.RawParamTypes, data[pos:pos+(paramNum<<1)])
 			pos += paramNum << 1
-
-			paramValues = data[pos:]
 		}
+		// types are each two bytes long.
+		if len(s.RawParamTypes) != paramNum*2 {
+			return nil, ErrMalformPacket
+		}
+		paramValues = data[pos:]
 
-		if err := c.bindStmtArgs(s, nullBitmaps, paramTypes, paramValues); err != nil {
+		if err := c.bindStmtArgs(s, nullBitmaps, paramValues); err != nil {
 			return nil, errors.Trace(err)
 		}
 	}
@@ -164,7 +170,7 @@ func (c *Conn) handleStmtExecute(data []byte) (*Result, error) {
 	return r, nil
 }
 
-func (c *Conn) bindStmtArgs(s *Stmt, nullBitmap, paramTypes, paramValues []byte) error {
+func (c *Conn) bindStmtArgs(s *Stmt, nullBitmap, paramValues []byte) error {
 	args := s.Args
 
 	pos := 0
@@ -180,8 +186,8 @@ func (c *Conn) bindStmtArgs(s *Stmt, nullBitmap, paramTypes, paramValues []byte)
 			continue
 		}
 
-		tp := paramTypes[i<<1]
-		isUnsigned := (paramTypes[(i<<1)+1] & 0x80) > 0
+		tp := s.RawParamTypes[i<<1]
+		isUnsigned := (s.RawParamTypes[(i<<1)+1] & 0x80) > 0
 
 		switch tp {
 		case MYSQL_TYPE_NULL:
