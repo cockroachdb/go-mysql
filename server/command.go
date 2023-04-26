@@ -102,7 +102,7 @@ func (c *Conn) Dispatch(data []byte) interface{} {
 		c.stmtID++
 		st := new(Stmt)
 		st.ID = c.stmtID
-		st.Query = hack.String(data)
+		st.Query = string(data)
 		var err error
 		if st.Params, st.Columns, st.Context, err = c.h.HandleStmtPrepare(st.Query); err != nil {
 			return err
