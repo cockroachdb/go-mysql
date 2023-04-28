@@ -198,7 +198,9 @@ func (h EmptyHandler) HandleFieldList(table string, fieldWildcard string) ([]*Fi
 func (h EmptyHandler) HandleStmtPrepare(query string) (int, int, interface{}, error) {
 	return 0, 0, nil, fmt.Errorf("not supported now")
 }
-func (h EmptyHandler) HandleStmtExecute(context interface{}, query string, args []interface{}) (*Result, error) {
+func (h EmptyHandler) HandleStmtExecute(
+	context interface{}, query string, args []interface{},
+) (*Result, error) {
 	return nil, fmt.Errorf("not supported now")
 }
 
@@ -210,11 +212,15 @@ func (h EmptyReplicationHandler) HandleRegisterSlave(data []byte) error {
 	return fmt.Errorf("not supported now")
 }
 
-func (h EmptyReplicationHandler) HandleBinlogDump(pos Position) (*replication.BinlogStreamer, error) {
+func (h EmptyReplicationHandler) HandleBinlogDump(
+	pos Position,
+) (*replication.BinlogStreamer, error) {
 	return nil, fmt.Errorf("not supported now")
 }
 
-func (h EmptyReplicationHandler) HandleBinlogDumpGTID(gtidSet *MysqlGTIDSet) (*replication.BinlogStreamer, error) {
+func (h EmptyReplicationHandler) HandleBinlogDumpGTID(
+	gtidSet *MysqlGTIDSet,
+) (*replication.BinlogStreamer, error) {
 	return nil, fmt.Errorf("not supported now")
 }
 

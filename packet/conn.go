@@ -183,6 +183,21 @@ func (c *Conn) ReadPacketTo(w io.Writer) error {
 
 // WritePacket: data already has 4 bytes header
 // will modify data inplace
+func (c *Conn) BufferPacket(existing []byte, data []byte) []byte {
+	length := len(data) - 4
+
+	data[0] = byte(length)
+	data[1] = byte(length >> 8)
+	data[2] = byte(length >> 16)
+	data[3] = c.Sequence
+
+	c.Sequence++
+
+	return append(existing, data...)
+}
+
+// WritePacket: data already has 4 bytes header
+// will modify data inplace
 func (c *Conn) WritePacket(data []byte) error {
 	length := len(data) - 4
 
