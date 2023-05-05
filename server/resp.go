@@ -6,6 +6,7 @@ import (
 
 	. "github.com/go-mysql-org/go-mysql/mysql"
 	"github.com/go-mysql-org/go-mysql/replication"
+	"github.com/go-mysql-org/go-mysql/utils"
 )
 
 func (c *Conn) writeOK(r *Result) error {
@@ -142,17 +143,21 @@ func (c *Conn) writeResultset(r *Resultset) error {
 		if err := c.writeFieldList(r.Fields, data); err != nil {
 			return err
 		}
-	 */
-	bufferedData := make([]byte, 0, 1024)
+	*/
+	bufferedData := utils.ByteSliceResultGet(1024 * 1024)
+	defer utils.ByteSliceResultPut(bufferedData)
+	bufferedData.B = bufferedData.B[:0]
 
-	data := make([]byte, 4, 1024)
-	data = append(data, columnLen...)
-	bufferedData = c.BufferPacket(bufferedData, data)
+	data := utils.ByteSliceGet(1024)
+	defer utils.ByteSlicePut(data)
+	data.B = data.B[:4]
+	data.B = append(data.B, columnLen...)
+	c.BufferPacket(bufferedData, data)
 
 	/*if err := c.writeFieldList(r.Fields, data); err != nil {
 		return err
 	}*/
-	bufferedData = c.bufferFieldList(bufferedData, r.Fields, data)
+	c.bufferFieldList(bufferedData, r.Fields, data)
 
 	// streaming select resultsets handle rowdata in a separate callback of type
 	// SelectPerRowCallback so we're done here
@@ -161,26 +166,26 @@ func (c *Conn) writeResultset(r *Resultset) error {
 	}
 
 	for _, v := range r.RowDatas {
-		data = data[0:4]
-		data = append(data, v...)
-		bufferedData = c.BufferPacket(bufferedData, data)
-		if len(bufferedData) > MaxPayloadLen {
-			if _, err := c.Write(bufferedData); err != nil {
+		data.B = data.B[0:4]
+		data.B = append(data.B, v...)
+		c.BufferPacket(bufferedData, data)
+		if len(bufferedData.B) > MaxPayloadLen {
+			if _, err := c.Write(bufferedData.B); err != nil {
 				return err
 			}
-			bufferedData = bufferedData[:0]
+			bufferedData.B = bufferedData.B[:0]
 		}
 	}
 
-	bufferedData = c.bufferEOF(bufferedData)
-	if _, err := c.Write(bufferedData); err != nil {
+	c.bufferEOF(bufferedData, data)
+	if _, err := c.Write(bufferedData.B); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *Conn) bufferFieldList(in []byte, fs []*Field, data []byte) []byte {
+func (c *Conn) bufferFieldList(in *utils.ByteSlice, fs []*Field, data *utils.ByteSlice) {
 	/*
 
 		if data == nil {
@@ -199,31 +204,25 @@ func (c *Conn) bufferFieldList(in []byte, fs []*Field, data []byte) []byte {
 			return err
 		}
 
-	 */
-	if data == nil {
-		data = make([]byte, 4, 1024)
-	}
+	*/
 
 	for _, v := range fs {
-		data = data[0:4]
-		data = append(data, v.Dump()...)
-		in = c.BufferPacket(in, data)
+		data.B = data.B[0:4]
+		data.B = append(data.B, v.Dump()...)
+		c.BufferPacket(in, data)
 	}
 
-	return c.bufferEOF(in)
+	c.bufferEOF(in, data)
 }
-
-
-func (c *Conn) bufferEOF(in []byte) []byte {
-	data := make([]byte, 4, 9)
-
-	data = append(data, EOF_HEADER)
+func (c *Conn) bufferEOF(in *utils.ByteSlice, data *utils.ByteSlice) {
+	data.B = data.B[:4]
+	data.B = append(data.B, EOF_HEADER)
 	if c.capability&CLIENT_PROTOCOL_41 > 0 {
-		data = append(data, byte(c.warnings), byte(c.warnings>>8))
-		data = append(data, byte(c.status), byte(c.status>>8))
+		data.B = append(data.B, byte(c.warnings), byte(c.warnings>>8))
+		data.B = append(data.B, byte(c.status), byte(c.status>>8))
 	}
 
-	return c.BufferPacket(in, data)
+	c.BufferPacket(in, data)
 }
 
 func (c *Conn) writeFieldList(fs []*Field, data []byte) error {
