@@ -153,10 +153,6 @@ func (c *Conn) writeResultset(r *Resultset) error {
 		return err
 	}*/
 	bufferedData = c.bufferFieldList(bufferedData, r.Fields, data)
-	if _, err := c.Write(bufferedData); err != nil {
-		return err
-	}
-	bufferedData = bufferedData[:0]
 
 	// streaming select resultsets handle rowdata in a separate callback of type
 	// SelectPerRowCallback so we're done here
@@ -168,7 +164,7 @@ func (c *Conn) writeResultset(r *Resultset) error {
 		data = data[0:4]
 		data = append(data, v...)
 		bufferedData = c.BufferPacket(bufferedData, data)
-		if len(bufferedData) > MaxPayloadLen / 2 {
+		if len(bufferedData) > MaxPayloadLen {
 			if _, err := c.Write(bufferedData); err != nil {
 				return err
 			}

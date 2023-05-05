@@ -406,12 +406,13 @@ func (c *Conn) readResultRows(result *Result, isBinary bool) (err error) {
 
 		result.RowDatas = append(result.RowDatas, data)
 	}
-
+	/*
 	if cap(result.Values) < len(result.RowDatas) {
 		result.Values = make([][]FieldValue, len(result.RowDatas))
 	} else {
 		result.Values = result.Values[:len(result.RowDatas)]
 	}
+
 
 	for i := range result.Values {
 		result.Values[i], err = result.RowDatas[i].Parse(result.Fields, isBinary, result.Values[i])
@@ -420,6 +421,7 @@ func (c *Conn) readResultRows(result *Result, isBinary bool) (err error) {
 			return errors.Trace(err)
 		}
 	}
+ */
 
 	return nil
 }
