@@ -6,6 +6,11 @@ type ByteSlice struct {
 	B []byte
 }
 
+func (b *ByteSlice) Write(p []byte) (n int, err error) {
+	b.B = append(b.B, p...)
+	return len(p), nil
+}
+
 var (
 	byteSlicePool = sync.Pool{
 		New: func() interface{} {

@@ -130,20 +130,6 @@ func (c *Conn) writeResultset(r *Resultset) error {
 	}
 
 	columnLen := PutLengthEncodedInt(uint64(len(r.Fields)))
-
-	/*
-
-		data := make([]byte, 4, 1024)
-
-		data = append(data, columnLen...)
-		if err := c.WritePacket(data); err != nil {
-			return err
-		}
-
-		if err := c.writeFieldList(r.Fields, data); err != nil {
-			return err
-		}
-	*/
 	bufferedData := utils.ByteSliceResultGet(1024 * 1024)
 	defer utils.ByteSliceResultPut(bufferedData)
 	bufferedData.B = bufferedData.B[:0]
@@ -153,10 +139,6 @@ func (c *Conn) writeResultset(r *Resultset) error {
 	data.B = data.B[:4]
 	data.B = append(data.B, columnLen...)
 	c.BufferPacket(bufferedData, data)
-
-	/*if err := c.writeFieldList(r.Fields, data); err != nil {
-		return err
-	}*/
 	c.bufferFieldList(bufferedData, r.Fields, data)
 
 	// streaming select resultsets handle rowdata in a separate callback of type
@@ -186,26 +168,6 @@ func (c *Conn) writeResultset(r *Resultset) error {
 }
 
 func (c *Conn) bufferFieldList(in *utils.ByteSlice, fs []*Field, data *utils.ByteSlice) {
-	/*
-
-		if data == nil {
-			data = make([]byte, 4, 1024)
-		}
-
-		for _, v := range fs {
-			data = data[0:4]
-			data = append(data, v.Dump()...)
-			if err := c.WritePacket(data); err != nil {
-				return err
-			}
-		}
-
-		if err := c.writeEOF(); err != nil {
-			return err
-		}
-
-	*/
-
 	for _, v := range fs {
 		data.B = data.B[0:4]
 		data.B = append(data.B, v.Dump()...)
@@ -214,6 +176,7 @@ func (c *Conn) bufferFieldList(in *utils.ByteSlice, fs []*Field, data *utils.Byt
 
 	c.bufferEOF(in, data)
 }
+
 func (c *Conn) bufferEOF(in *utils.ByteSlice, data *utils.ByteSlice) {
 	data.B = data.B[:4]
 	data.B = append(data.B, EOF_HEADER)
