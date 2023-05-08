@@ -100,10 +100,9 @@ func NewCustomizedConn(
 	return c, nil
 }
 
-func NewAuthedProxyConn(conn net.Conn, h Handler) *Conn {
-	packetConn := packet.NewConn(conn)
+func NewAuthedProxyConn(conn *packet.Conn, h Handler) *Conn {
 	return &Conn{
-		Conn: packetConn,
+		Conn: conn,
 		h:    h,
 	}
 }
