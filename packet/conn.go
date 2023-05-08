@@ -89,16 +89,17 @@ func (c *Conn) ReadPacket() ([]byte, error) {
 
 func (c *Conn) ReadPacketReuseMem(dst []byte) ([]byte, error) {
 	// Here we use `sync.Pool` to avoid allocate/destroy buffers frequently.
-	buf := utils.BytesBufferGet()
+	buf := utils.ByteSliceResultGet(1024 * 1024)
 	defer func() {
-		utils.BytesBufferPut(buf)
+		utils.ByteSliceResultPut(buf)
 	}()
+	buf.B = buf.B[:0]
 
 	if err := c.ReadPacketTo(buf); err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	readBytes := buf.Bytes()
+	readBytes := buf.B
 	readSize := len(readBytes)
 	var result []byte
 	if len(dst) > 0 {
@@ -179,6 +180,21 @@ func (c *Conn) ReadPacketTo(w io.Writer) error {
 	}
 
 	return nil
+}
+
+// WritePacket: data already has 4 bytes header
+// will modify data inplace
+func (c *Conn) BufferPacket(existing *utils.ByteSlice, data *utils.ByteSlice) {
+	length := len(data.B) - 4
+
+	data.B[0] = byte(length)
+	data.B[1] = byte(length >> 8)
+	data.B[2] = byte(length >> 16)
+	data.B[3] = c.Sequence
+
+	c.Sequence++
+
+	existing.B = append(existing.B, data.B...)
 }
 
 // WritePacket: data already has 4 bytes header

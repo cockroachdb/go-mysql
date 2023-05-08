@@ -6,6 +6,7 @@ import (
 
 	. "github.com/go-mysql-org/go-mysql/mysql"
 	"github.com/go-mysql-org/go-mysql/replication"
+	"github.com/go-mysql-org/go-mysql/utils"
 )
 
 func (c *Conn) writeOK(r *Result) error {
@@ -129,17 +130,16 @@ func (c *Conn) writeResultset(r *Resultset) error {
 	}
 
 	columnLen := PutLengthEncodedInt(uint64(len(r.Fields)))
+	bufferedData := utils.ByteSliceResultGet(1024 * 1024)
+	defer utils.ByteSliceResultPut(bufferedData)
+	bufferedData.B = bufferedData.B[:0]
 
-	data := make([]byte, 4, 1024)
-
-	data = append(data, columnLen...)
-	if err := c.WritePacket(data); err != nil {
-		return err
-	}
-
-	if err := c.writeFieldList(r.Fields, data); err != nil {
-		return err
-	}
+	data := utils.ByteSliceGet(1024)
+	defer utils.ByteSlicePut(data)
+	data.B = data.B[:4]
+	data.B = append(data.B, columnLen...)
+	c.BufferPacket(bufferedData, data)
+	c.bufferFieldList(bufferedData, r.Fields, data)
 
 	// streaming select resultsets handle rowdata in a separate callback of type
 	// SelectPerRowCallback so we're done here
@@ -148,18 +148,44 @@ func (c *Conn) writeResultset(r *Resultset) error {
 	}
 
 	for _, v := range r.RowDatas {
-		data = data[0:4]
-		data = append(data, v...)
-		if err := c.WritePacket(data); err != nil {
-			return err
+		data.B = data.B[0:4]
+		data.B = append(data.B, v...)
+		c.BufferPacket(bufferedData, data)
+		if len(bufferedData.B) > MaxPayloadLen {
+			if _, err := c.Write(bufferedData.B); err != nil {
+				return err
+			}
+			bufferedData.B = bufferedData.B[:0]
 		}
 	}
 
-	if err := c.writeEOF(); err != nil {
+	c.bufferEOF(bufferedData, data)
+	if _, err := c.Write(bufferedData.B); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (c *Conn) bufferFieldList(in *utils.ByteSlice, fs []*Field, data *utils.ByteSlice) {
+	for _, v := range fs {
+		data.B = data.B[0:4]
+		data.B = append(data.B, v.Dump()...)
+		c.BufferPacket(in, data)
+	}
+
+	c.bufferEOF(in, data)
+}
+
+func (c *Conn) bufferEOF(in *utils.ByteSlice, data *utils.ByteSlice) {
+	data.B = data.B[:4]
+	data.B = append(data.B, EOF_HEADER)
+	if c.capability&CLIENT_PROTOCOL_41 > 0 {
+		data.B = append(data.B, byte(c.warnings), byte(c.warnings>>8))
+		data.B = append(data.B, byte(c.status), byte(c.status>>8))
+	}
+
+	c.BufferPacket(in, data)
 }
 
 func (c *Conn) writeFieldList(fs []*Field, data []byte) error {
